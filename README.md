@@ -1,2 +1,3 @@
-# dos-postgresql-js
-Library for PostgreSQL Wrapper
+# dos-posgresql-js
+
+Library for PostgreSQL Wrapper.

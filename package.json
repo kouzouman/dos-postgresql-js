@@ -1,0 +1,27 @@
+{
+  "name": "dos-postgresql-js",
+  "version": "0.0.1",
+  "description": "Library for PostgreSQL Wrapper.",
+  "main": "index.js",
+  "repository": "https://github.com/kouzouman/dos-string-js.git",
+  "author": "kouzouman <check@doers-square.com>",
+  "license": "MIT",
+  "dependencies": {
+    "pg": "^7.12.1"
+  },
+  "devDependencies": {
+    "@babel/cli": "^7.5.5",
+    "@babel/core": "^7.5.5",
+    "@babel/preset-env": "^7.5.5",
+    "@babel/register": "^7.5.5",
+    "jest": "^24.9.0"
+  },
+  "scripts": {
+    "build": "./node_modules/.bin/babel src --out-dir dist",
+    "test": "jest"
+  },
+  "prettier": {
+    "singleQuote": true,
+    "semi": false
+  }
+}
