@@ -1,1 +1,1 @@
-module.exports = require('./src/dos-postgresql.js')
+module.exports = require('./dist/dos-postgresql.js')
