@@ -256,8 +256,6 @@ class DosPostgresql {
   }
 
 }
-
-var _default = new DosPostgresql();
 /**
  * クエリの実行結果
  *
@@ -265,7 +263,7 @@ var _default = new DosPostgresql();
  */
 
 
-exports.default = _default;
+exports.default = DosPostgresql;
 
 class QueryResult {
   /**

@@ -29,7 +29,7 @@ const DefaultConfig = {
  *
  * @class DosPostgresql
  */
-class DosPostgresql {
+export default class DosPostgresql {
   /**
    * コンストラクタ
    * @param {any} [conf=null] 接続情報 DefaultConfig参考
@@ -238,8 +238,6 @@ class DosPostgresql {
     return await this.execQuery('ROLLBACK')
   }
 }
-
-export default new DosPostgresql()
 
 /**
  * クエリの実行結果
