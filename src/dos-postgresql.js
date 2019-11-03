@@ -90,17 +90,19 @@ export default class DosPostgresql {
     try {
       // console.log('execInsert-')
       const result = await this.execQuery(sql, param)
-      return new InsertedResult(result)
+      if (!getId) return new InsertedResult(result)
+
       // // console.log('result---')
       // // console.log(result)
-      // if (result.rowCount.toNumber() > 0 && getId) {
-      //   const idSelected = await this.execSelect('SELECT LASTVAL() as last_id')
-      //   // console.log('idSelected')
-      //   // console.log(idSelected)
-      //   return idSelected.rows[0].last_id.toNumber()
-      // } else {
-      //   return new InsertedResult(result)
-      // }
+
+      if (result.rowCount.toNumber() > 0) {
+        const idSelected = await this.execSelect('SELECT LASTVAL() as last_id')
+        // console.log('idSelected')
+        // console.log(idSelected)
+        return idSelected.rows[0].last_id.toNumber()
+      } else {
+        return new InsertedResult(result)
+      }
     } catch (e) {
       console.error('InsertError')
       console.error(e)
