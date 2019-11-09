@@ -1,5 +1,7 @@
 'use strict'
 
+require('dos-common-js')
+
 // //  Host
 // const Host = process.env.PG_HOST
 // //  Database

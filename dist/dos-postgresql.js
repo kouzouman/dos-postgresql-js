@@ -1,4 +1,11 @@
-'use strict'; // //  Host
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.InsertedResult = exports.SelectedResult = exports.default = void 0;
+
+require('dos-common-js'); // //  Host
 // const Host = process.env.PG_HOST
 // //  Database
 // const Database = process.env.PG_DB_NAME
@@ -9,10 +16,6 @@
 // //  Password
 // const Password = process.env.PG_PASS
 
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports.InsertedResult = exports.SelectedResult = exports.default = void 0;
 
 const pg = require('pg');
 
