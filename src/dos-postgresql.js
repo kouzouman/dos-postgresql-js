@@ -2,6 +2,8 @@
 
 require('dos-common-js')
 
+import RedisWrapper from './redis-wrapper'
+
 // //  Host
 // const Host = process.env.PG_HOST
 // //  Database
@@ -23,7 +25,14 @@ const DefaultConfig = {
   port: 5432, //env var: PGPORT
   max: 10, // max number of clients in the pool
   ssl: false,
-  idleTimeoutMillis: 30000 // how long a client is allowed to remain idle before being closed
+  idleTimeoutMillis: 30000, // how long a client is allowed to remain idle before being closed
+
+  //  Redis
+  redisHost: '',
+  redisPort: '6379',
+  redisUser: '',
+  redisPass:''
+
 }
 
 /**
@@ -45,6 +54,14 @@ export default class DosPostgresql {
     this.conf = conf
     this.con = new pg.Pool(this.conf)
     this.con.on('error', this.connectError)
+
+    this.redis = new RedisWrapper({
+      user: conf.redisUser,
+      pass: conf.redisPass,
+      host: conf.redisHost,
+      port:conf.redisPort
+    })
+
   }
 
   //  エラー処理   ------------------------------------------------------
@@ -69,6 +86,7 @@ export default class DosPostgresql {
    * @param {Object} param パラメータ
    */
   async execUpdate(sql, param = []) {
+
     try {
       const result = await this.execQuery(sql, param)
       return new QueryResult(result)
