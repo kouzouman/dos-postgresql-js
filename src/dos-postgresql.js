@@ -1,7 +1,6 @@
 'use strict'
 
 require('dos-common-js')
-
 // //  Host
 // const Host = process.env.PG_HOST
 // //  Database
@@ -14,6 +13,9 @@ require('dos-common-js')
 // const Password = process.env.PG_PASS
 
 const pg = require('pg')
+import { createClient } from 'redis'
+import { createHash } from 'crypto';
+
 
 const DefaultConfig = {
   user: '', //env var: PGUSER
@@ -23,7 +25,17 @@ const DefaultConfig = {
   port: 5432, //env var: PGPORT
   max: 10, // max number of clients in the pool
   ssl: false,
-  idleTimeoutMillis: 30000 // how long a client is allowed to remain idle before being closed
+  idleTimeoutMillis: 30000, // how long a client is allowed to remain idle before being closed
+
+  redisHost: '',
+  redisPort: '6379',
+  redisUser: '',
+  redisPass: '',
+
+  /**
+   * 現在選択しているdbNumber
+   */
+  dbNumber:0,
 }
 
 /**
@@ -45,6 +57,87 @@ export default class DosPostgresql {
     this.conf = conf
     this.con = new pg.Pool(this.conf)
     this.con.on('error', this.connectError)
+
+    this.redis = this.createRedisConnector()
+    this.redis.on("ready", ()=>this.setRedisDbNumber())
+    this.redis.connect()
+  }
+
+  //  Redis＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
+
+  /**
+   * Redisのコネクタを作成する
+   */
+  createRedisConnector() {
+    let url = ''
+    if (this.conf.redisUser && this.conf.redisPass)
+      url = `redis://${this.conf.redisUser}:${this.conf.redisPass}@${this.conf.redisHost}:${this.conf.redisPort}`
+    else if (!this.conf.redisUser && this.conf.redisPass)
+      url = `redis://:${this.conf.redisPass}@${this.conf.redisHost}:${this.conf.redisPort}`
+    else if (this.conf.redisUser && !this.conf.redisPass)
+      url = `redis://${this.conf.redisUser}@${this.conf.redisHost}:${this.conf.redisPort}`
+    else if (!this.conf.redisUser && !this.conf.redisPass)
+      url = `redis://${this.conf.redisHost}:${this.conf.redisPort}`
+
+    console.log(url)
+    return createClient({url})
+  }
+
+  sha256(data)
+  {
+    const text = typeof data == "string" ? data : JSON.stringify(data)
+    return  createHash('sha256').update(text).digest('hex');
+  }
+
+  /**
+   * redisDbの番号を変更があれば設定
+   * @param {*} dbNumber 
+   */
+  async setRedisDbNumber(dbNumber = 0){
+
+    if(this.conf.dbNumber != dbNumber){
+      this.conf.dbNumber = dbNumber -0;
+      await this.redis.select(this.conf.dbNumber)
+    }
+
+  }
+
+
+  /**
+   * Redisから値を取得する
+   * @param {*} sql
+   * @param {*} param
+   */
+  async redisGet(sql, param, dbNumber = 0) {
+    // await this.connectRedis()
+    await this.setRedisDbNumber(dbNumber)
+    const key =  this.sha256( { sql, param })
+    const resultJson = await this.redis.get(key)
+    const res = JSON.parse(resultJson)
+    // console.log({type:"get", key, res})
+    return res
+  }
+
+  /**
+   * redisに値を登録する
+   * @param {*} sql
+   * @param {*} param
+   * @returns
+   */
+  async redisSet(sql, param, value, dbNumber = 0) {
+    // await this.connectRedis()
+    await this.setRedisDbNumber(dbNumber)
+    const key =  this.sha256( { sql, param })
+    // console.log({type:"set", key, value})
+    return await this.redis.set(key, JSON.stringify(value))
+  }
+
+
+  /**
+   * 特定のDB = 0のデータを削除
+   */
+  async redisFlushdb(dbNumber){
+    return this.redis.FLUSHDB(dbNumber - 0);
   }
 
   //  エラー処理   ------------------------------------------------------
@@ -78,7 +171,7 @@ export default class DosPostgresql {
       return {
         command: 'UPDATE',
         fields: [],
-        rows: []
+        rows: [],
       }
     }
   }
@@ -112,7 +205,7 @@ export default class DosPostgresql {
         command: 'INSERT',
         fields: [],
         rows: [],
-        error: e
+        error: e,
       }
     }
   }
@@ -126,22 +219,27 @@ export default class DosPostgresql {
    *
    * @memberOf DosPostgresql+
    */
-  async execSelect(sql, param = []) {
+  async execSelect(sql, param = [], redisDbNumber = null) {
     try {
+      const cash = redisDbNumber == null ? await this.redisGet(sql, param) : null
       // console.log(sql)
       // console.log(param)
-      const result = await this.execQuery(sql, param)
-      // console.log('------execselect---')
+      const result = !!cash ? cash : await this.execQuery(sql, param)
       // console.log(result)
+      // console.log({mes:"sqlres", redisDbNumber,result })
+      if (redisDbNumber != null) {
+        this.redisSet(sql, param, result)
+      }
+
       return new SelectedResult(result)
     } catch (e) {
-      console.error('Select')
+      console.error('Select Exception')
       console.error(e)
       return {
         command: 'SELECT',
         fields: [],
         rows: [],
-        error: e
+        error: e,
       }
     }
   }
@@ -163,7 +261,7 @@ export default class DosPostgresql {
       return {
         command: 'DELETE',
         fields: [],
-        rows: []
+        rows: [],
       }
     }
   }
