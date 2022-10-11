@@ -3,7 +3,7 @@
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.InsertedResult = exports.SelectedResult = exports.default = void 0;
+exports.default = exports.SelectedResult = exports.InsertedResult = void 0;
 
 var _redis = require("redis");
 
@@ -63,14 +63,16 @@ class DosPostgresql {
    * @memberOf DosPostgresql
    */
   constructor(conf = null) {
+    var _this$redis, _this$redis2;
+
     const self = this;
     if (conf == null) conf = DefaultConfig;
     this.conf = conf;
     this.con = new pg.Pool(this.conf);
     this.con.on('error', this.connectError);
     this.redis = this.createRedisConnector();
-    this.redis.on("ready", () => this.setRedisDbNumber());
-    this.redis.connect();
+    (_this$redis = this.redis) === null || _this$redis === void 0 ? void 0 : _this$redis.on("ready", () => this.setRedisDbNumber());
+    (_this$redis2 = this.redis) === null || _this$redis2 === void 0 ? void 0 : _this$redis2.connect();
   } //  Redis＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
 
   /**
@@ -79,9 +81,16 @@ class DosPostgresql {
 
 
   createRedisConnector() {
+    var _this$conf$redisUser, _this$conf$redisPass, _this$conf$redisHost, _this$conf$redisPort;
+
+    const user = (_this$conf$redisUser = this.conf.redisUser) !== null && _this$conf$redisUser !== void 0 ? _this$conf$redisUser : '';
+    const pass = (_this$conf$redisPass = this.conf.redisPass) !== null && _this$conf$redisPass !== void 0 ? _this$conf$redisPass : '';
+    const host = (_this$conf$redisHost = this.conf.redisHost) !== null && _this$conf$redisHost !== void 0 ? _this$conf$redisHost : '';
+    const port = (_this$conf$redisPort = this.conf.redisPort) !== null && _this$conf$redisPort !== void 0 ? _this$conf$redisPort : '';
+    if (!host) return null;
     let url = '';
-    if (this.conf.redisUser && this.conf.redisPass) url = `redis://${this.conf.redisUser}:${this.conf.redisPass}@${this.conf.redisHost}:${this.conf.redisPort}`;else if (!this.conf.redisUser && this.conf.redisPass) url = `redis://:${this.conf.redisPass}@${this.conf.redisHost}:${this.conf.redisPort}`;else if (this.conf.redisUser && !this.conf.redisPass) url = `redis://${this.conf.redisUser}@${this.conf.redisHost}:${this.conf.redisPort}`;else if (!this.conf.redisUser && !this.conf.redisPass) url = `redis://${this.conf.redisHost}:${this.conf.redisPort}`;
-    console.log(url);
+    if (user && pass) url = `redis://${user}:${pass}@${host}:${port}`;else if (!user && pass) url = `redis://:${pass}@${host}:${port}`;else if (user && !pass) url = `redis://${user}@${host}:${port}`;else if (!user && !pass) url = `redis://${host}:${port}`;
+    console.log('redis-url : ' + url);
     return (0, _redis.createClient)({
       url
     });
@@ -99,8 +108,10 @@ class DosPostgresql {
 
   async setRedisDbNumber(dbNumber = 0) {
     if (this.conf.dbNumber != dbNumber) {
+      var _this$redis3;
+
       this.conf.dbNumber = dbNumber - 0;
-      await this.redis.select(this.conf.dbNumber);
+      await ((_this$redis3 = this.redis) === null || _this$redis3 === void 0 ? void 0 : _this$redis3.select(this.conf.dbNumber));
     }
   }
   /**
@@ -111,13 +122,15 @@ class DosPostgresql {
 
 
   async redisGet(sql, param, dbNumber = 0) {
+    var _this$redis4;
+
     // await this.connectRedis()
     await this.setRedisDbNumber(dbNumber);
     const key = this.sha256({
       sql,
       param
     });
-    const resultJson = await this.redis.get(key);
+    const resultJson = await ((_this$redis4 = this.redis) === null || _this$redis4 === void 0 ? void 0 : _this$redis4.get(key));
     const res = JSON.parse(resultJson); // console.log({type:"get", key, res})
 
     return res;
@@ -131,6 +144,8 @@ class DosPostgresql {
 
 
   async redisSet(sql, param, value, dbNumber = 0) {
+    var _this$redis5;
+
     // await this.connectRedis()
     await this.setRedisDbNumber(dbNumber);
     const key = this.sha256({
@@ -138,7 +153,7 @@ class DosPostgresql {
       param
     }); // console.log({type:"set", key, value})
 
-    return await this.redis.set(key, JSON.stringify(value));
+    return await ((_this$redis5 = this.redis) === null || _this$redis5 === void 0 ? void 0 : _this$redis5.set(key, JSON.stringify(value)));
   }
   /**
    * 特定のDB = 0のデータを削除
@@ -146,7 +161,10 @@ class DosPostgresql {
 
 
   async redisFlushdb(dbNumber) {
-    return this.redis.FLUSHDB(dbNumber - 0);
+    var _this$redis6;
+
+    await this.setRedisDbNumber(dbNumber);
+    return (_this$redis6 = this.redis) === null || _this$redis6 === void 0 ? void 0 : _this$redis6.FLUSHDB();
   } //  エラー処理   ------------------------------------------------------
 
   /**
@@ -230,14 +248,14 @@ class DosPostgresql {
 
   async execSelect(sql, param = [], redisDbNumber = null) {
     try {
-      const cash = redisDbNumber == null ? await this.redisGet(sql, param) : null; // console.log(sql)
+      const cash = redisDbNumber !== null ? await this.redisGet(sql, param, redisDbNumber) : null; // console.log(sql)
       // console.log(param)
 
       const result = !!cash ? cash : await this.execQuery(sql, param); // console.log(result)
       // console.log({mes:"sqlres", redisDbNumber,result })
 
-      if (redisDbNumber != null) {
-        this.redisSet(sql, param, result);
+      if (redisDbNumber !== null) {
+        this.redisSet(sql, param, result, redisDbNumber);
       }
 
       return new SelectedResult(result);
