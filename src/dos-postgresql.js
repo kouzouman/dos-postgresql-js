@@ -132,12 +132,12 @@ export default class DosPostgresql {
    * @param {*} param
    * @returns
    */
-  async redisSet(sql, param, value, dbNumber = 0) {
+  async redisSet(sql, param, value, dbNumber = 0, lifespan=3600) {
     // await this.connectRedis()
     await this.setRedisDbNumber(dbNumber)
     const key =  this.sha256( { sql, param })
     // console.log({type:"set", key, value})
-    return await this.redis?.set(key, JSON.stringify(value))
+    return await this.redis?.set(key, JSON.stringify(value), {"EX":lifespan})
   }
 
 
@@ -228,7 +228,7 @@ export default class DosPostgresql {
    *
    * @memberOf DosPostgresql+
    */
-  async execSelect(sql, param = [], redisDbNumber = null) {
+  async execSelect(sql, param = [], redisDbNumber = null, lifespan=3600 ) {
     try {
       const cash = redisDbNumber !== null ? await this.redisGet(sql, param, redisDbNumber) : null
       // console.log(sql)
@@ -237,7 +237,7 @@ export default class DosPostgresql {
       // console.log(result)
       // console.log({mes:"sqlres", redisDbNumber,result })
       if (redisDbNumber !== null) {
-        this.redisSet(sql, param, result, redisDbNumber)
+        this.redisSet(sql, param, result, redisDbNumber, lifespan)
       }
 
       return new SelectedResult(result)

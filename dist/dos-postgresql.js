@@ -143,7 +143,7 @@ class DosPostgresql {
    */
 
 
-  async redisSet(sql, param, value, dbNumber = 0) {
+  async redisSet(sql, param, value, dbNumber = 0, lifespan = 3600) {
     var _this$redis5;
 
     // await this.connectRedis()
@@ -153,7 +153,9 @@ class DosPostgresql {
       param
     }); // console.log({type:"set", key, value})
 
-    return await ((_this$redis5 = this.redis) === null || _this$redis5 === void 0 ? void 0 : _this$redis5.set(key, JSON.stringify(value)));
+    return await ((_this$redis5 = this.redis) === null || _this$redis5 === void 0 ? void 0 : _this$redis5.set(key, JSON.stringify(value), {
+      "EX": lifespan
+    }));
   }
   /**
    * 特定のDB = 0のデータを削除
@@ -246,7 +248,7 @@ class DosPostgresql {
    */
 
 
-  async execSelect(sql, param = [], redisDbNumber = null) {
+  async execSelect(sql, param = [], redisDbNumber = null, lifespan = 3600) {
     try {
       const cash = redisDbNumber !== null ? await this.redisGet(sql, param, redisDbNumber) : null; // console.log(sql)
       // console.log(param)
@@ -255,7 +257,7 @@ class DosPostgresql {
       // console.log({mes:"sqlres", redisDbNumber,result })
 
       if (redisDbNumber !== null) {
-        this.redisSet(sql, param, result, redisDbNumber);
+        this.redisSet(sql, param, result, redisDbNumber, lifespan);
       }
 
       return new SelectedResult(result);
