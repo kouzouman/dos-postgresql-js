@@ -162,11 +162,36 @@ class DosPostgresql {
    */
 
 
-  async redisFlushdb(dbNumber) {
+  async redisDel(sql, param, dbNumber = 0) {
     var _this$redis6;
 
+    // await this.connectRedis()
     await this.setRedisDbNumber(dbNumber);
-    return (_this$redis6 = this.redis) === null || _this$redis6 === void 0 ? void 0 : _this$redis6.FLUSHDB();
+    const key = this.sha256({
+      sql,
+      param
+    }); // console.log({type:"set", key, value})
+    // console.log("this.redis?.HDEL")
+    // console.log(this.redis?.HDEL)
+    // console.log("this.redis?.hdel")
+    // console.log(this.redis?.hdel)
+    // console.log("this.redis?.del")
+    // console.log(this.redis?.del)
+    // console.log("this.redis?.DEL")
+    // console.log(this.redis?.DEL)
+
+    return await ((_this$redis6 = this.redis) === null || _this$redis6 === void 0 ? void 0 : _this$redis6.DEL(key));
+  }
+  /**
+   * 特定のDB = 0のデータを削除
+   */
+
+
+  async redisFlushdb(dbNumber) {
+    var _this$redis7;
+
+    await this.setRedisDbNumber(dbNumber);
+    return (_this$redis7 = this.redis) === null || _this$redis7 === void 0 ? void 0 : _this$redis7.FLUSHDB();
   } //  エラー処理   ------------------------------------------------------
 
   /**
@@ -248,12 +273,17 @@ class DosPostgresql {
    */
 
 
-  async execSelect(sql, param = [], redisDbNumber = null, lifespan = 3600) {
+  async execSelect(sql, param = [], redisDbNumber = null, reflesh = false, lifespan = 3600) {
     try {
-      const cash = redisDbNumber !== null ? await this.redisGet(sql, param, redisDbNumber) : null; // console.log(sql)
+      if (reflesh) {
+        await this.redisDel(sql, param, redisDbNumber);
+      }
+
+      const cash = !reflesh && redisDbNumber !== null ? await this.redisGet(sql, param, redisDbNumber) : null; // console.log(sql)
       // console.log(param)
 
-      const result = !!cash ? cash : await this.execQuery(sql, param); // console.log(result)
+      if (!!cash) return cash;
+      const result = await this.execQuery(sql, param); // console.log(result)
       // console.log({mes:"sqlres", redisDbNumber,result })
 
       if (redisDbNumber !== null) {

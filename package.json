@@ -1,6 +1,6 @@
 {
   "name": "dos-postgresql-js",
-  "version": "0.2.8",
+  "version": "0.2.11",
   "description": "Library for PostgreSQL Wrapper.",
   "main": "index.js",
   "repository": "https://github.com/kouzouman/dos-string-js.git",
